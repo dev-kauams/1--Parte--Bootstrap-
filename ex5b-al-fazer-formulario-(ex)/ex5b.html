@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Minimalista</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body {
+      background: radial-gradient(circle, #000, #A100FF);
+    }
+
+    .login-container {
+      height: 100dvh;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 380px;
+      padding: 30px;
+      border-radius: 16px;
+      background: #202020;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+
+    .form-control {
+      border-radius: 12px;
+      transition: all 0.25s ease;
+    }
+
+    .form-control:focus {
+      border-color: #A100FF;
+      box-shadow: 0 0 0 0.15rem rgba(13,110,253,0.2);
+    }
+
+    .input-group-text {
+      border-radius: 12px 0 0 12px;
+      background: #fff;
+    }
+
+    .btn-custom {
+      border-radius: 12px;
+      transition: all 0.25s ease;
+    }
+
+    .btn-custom:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgb(182, 63, 251);
+      background-color: #a200ffdd;
+    }
+    
+    .bg-purple{
+        background-color: #A100FF;
+    }
+
+    .text-purple{
+        color: #A100FF;
+    }
+
+    .btn-purple{
+        background-color: #A100FF;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container login-container d-flex justify-content-center align-items-center">
+
+    <div class="login-box">
+      <h4 class="text-center mb-4 text-purple">Login</h4>
+
+      <form>
+
+        <div class="mb-3">
+          <div class="input-group">
+            <span class="input-group-text bg-purple">
+              <i class="bi bi-envelope bg-purple"></i>
+            </span>
+            <input type="email" class="form-control" placeholder="Seu email" required>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="input-group">
+            <span class="input-group-text bg-purple">
+              <i class="bi bi-lock"></i>
+            </span>
+            <input type="password" class="form-control" placeholder="Sua senha" required>
+          </div>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-purple btn-custom">
+            Entrar <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+
+</body>
+</html>

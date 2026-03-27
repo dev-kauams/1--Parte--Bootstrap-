@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bootstrap Quiz — Complete o Código</title>
+
+ <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 118 94'><rect width='118' height='94' rx='24' fill='%237952b3'/><path fill='white' d='M18 73V21h27q8 0 13.5 4.5T64 38q0 6-2.5 9.5T55 52q5 1.5 8 5.5t3 10q0 8-5.5 12T43 84H18zm13-30h13q5 0 7.5-2t2.5-6q0-4-2.5-6T44 27H31zm0 20h14q5 0 8-2.5t3-7q0-4-3-6.5T45 45H31zM92 73H80V27h-7v-6h19z'/></svg>">
+ 
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #0c0c10;
+      --surface: #131318;
+      --surface2:#1a1a22;
+      --border:  #252530;
+      --border2: #30303e;
+      --text:    #e8e8f0;
+      --muted:   #5a5a78;
+      --dim:     #2a2a38;
+
+      /* Bootstrap purple */
+      --bs:   #7952b3;
+      --bs2:  #9b72d4;
+      --bs-g: rgba(121,82,179,.22);
+      --bs-b: rgba(121,82,179,.08);
+
+      --ok:   #00e5a0;
+      --ok-b: rgba(0,229,160,.08);
+      --err:  #ff4757;
+      --err-b:rgba(255,71,87,.08);
+      --gold: #ffb700;
+
+      --mc:   #7952b3;
+      --mc-g: rgba(121,82,179,.22);
+      --mc-b: rgba(121,82,179,.08);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family:'Space Grotesk',sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; overflow-x:hidden;
+    }
+
+    /* scanlines */
+    body::before {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,.012) 2px, rgba(255,255,255,.012) 4px);
+    }
+
+    /* corner glow */
+    body::after {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(121,82,179,.08), transparent 70%);
+    }
+
+    .app { position:relative; z-index:1; max-width:780px; margin:0 auto; padding:28px 20px 90px; }
+
+    /* ── HEADER ── */
+    .hdr { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:28px; flex-wrap:wrap; }
+
+    .hdr-left { display:flex; flex-direction:column; gap:5px; }
+
+    .game-label {
+      font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500;
+      letter-spacing:4px; text-transform:uppercase; color:var(--muted);
+    }
+
+    .game-title {
+      font-size:clamp(2rem,6vw,3rem); font-weight:700; line-height:1;
+      letter-spacing:-2px; color:var(--text);
+    }
+
+    .game-title em { color:var(--mc); font-style:normal; }
+
+    .xp-panel {
+      min-width:200px; flex:1; max-width:300px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:14px 16px;
+    }
+
+    .xp-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; }
+    .xp-label { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:2px; color:var(--gold); }
+    .xp-num { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); }
+    .xp-track { height:5px; background:var(--dim); border-radius:3px; overflow:hidden; }
+    .xp-fill { height:100%; background:linear-gradient(90deg,var(--mc),var(--bs2)); border-radius:3px; transition:width .5s cubic-bezier(.4,0,.2,1); width:0%; }
+
+    /* ── MODULE MAP ── */
+    .mod-map { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:22px; }
+
+    .mod-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; padding:11px 8px; text-align:center;
+      position:relative; overflow:hidden; transition:all .3s;
+    }
+
+    .mod-card::before {
+      content:''; position:absolute; inset:0;
+      background:var(--mc,transparent); opacity:.04; transition:opacity .3s;
+    }
+
+    .mod-card.active { border-color:var(--mc); }
+    .mod-card.active::before { opacity:.08; }
+    .mod-card.done { border-color:rgba(0,229,160,.3); }
+    .mod-card.done::before { background:var(--ok); opacity:.06; }
+
+    .mod-icon { font-size:1.2rem; margin-bottom:4px; filter:grayscale(1) opacity(.35); transition:all .3s; }
+    .mod-card.active .mod-icon, .mod-card.done .mod-icon { filter:none; }
+
+    .mod-name { font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:500; letter-spacing:1px; text-transform:uppercase; color:var(--muted); transition:color .3s; }
+    .mod-card.active .mod-name { color:var(--mc); }
+    .mod-card.done .mod-name { color:var(--ok); }
+    .mod-score { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--dim); margin-top:3px; }
+    .mod-card.done .mod-score { color:var(--ok); }
+    .mod-lock { position:absolute; top:5px; right:6px; font-size:9px; color:var(--dim); }
+    .mod-card.active .mod-lock, .mod-card.done .mod-lock { display:none; }
+
+    /* ── PROGRESS ── */
+    .prog { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 18px; margin-bottom:18px; display:flex; align-items:center; gap:14px; }
+    .prog-name { font-weight:700; font-size:.95rem; min-width:110px; color:var(--mc); transition:color .3s; }
+    .prog-dots { display:flex; gap:5px; flex:1; }
+    .pdot { flex:1; height:4px; border-radius:2px; background:var(--dim); transition:all .3s; }
+    .pdot.done { background:var(--mc); }
+    .pdot.active { background:var(--mc); opacity:.5; }
+    .prog-frac { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); }
+
+    /* ── CHIPS ── */
+    .chips { display:flex; gap:5px; margin-bottom:18px; flex-wrap:wrap; }
+    .chip { width:30px; height:30px; border-radius:6px; border:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:var(--muted); transition:all .3s; }
+    .chip.c { background:rgba(0,229,160,.1); border-color:rgba(0,229,160,.4); color:var(--ok); }
+    .chip.e { background:rgba(255,71,87,.1); border-color:rgba(255,71,87,.4); color:var(--err); }
+    .chip.sep { width:1px; border:none; border-left:1px solid var(--border2); background:transparent; }
+
+    /* ── QUESTION CARD ── */
+    .q-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; overflow:hidden;
+      animation:fadeUp .3s cubic-bezier(.4,0,.2,1);
+      transition:border-color .3s;
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+    .q-card.c-ok { border-color:rgba(0,229,160,.4); }
+    .q-card.c-err { border-color:rgba(255,71,87,.4); }
+
+    .q-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:11px 20px; border-bottom:1px solid var(--border);
+      background:var(--surface2);
+    }
+
+    .q-badge { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+
+    .q-tag {
+      font-family:'JetBrains Mono',monospace; font-size:11px;
+      padding:3px 12px; border-radius:20px;
+      border:1px solid color-mix(in srgb, var(--mc) 40%, transparent);
+      background:var(--mc-b); color:var(--mc);
+    }
+
+    .q-body { padding:22px 22px 18px; }
+
+    .q-title { font-size:1.25rem; font-weight:700; line-height:1.2; margin-bottom:12px; }
+
+    /* code block with blank */
+    .code-block {
+      background:#090910; border:1px solid var(--border);
+      border-left:3px solid var(--mc);
+      border-radius:8px; padding:16px 18px; margin-bottom:16px;
+      font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:2;
+      white-space:pre; overflow-x:auto; position:relative;
+    }
+
+    .ck{color:#c792ea} .cf{color:#82aaff} .cs{color:#c3e88d}
+    .co{color:#ffcb6b} .cm{color:#3d3d5a;font-style:italic} .ct{color:#89ddff}
+
+    .blank-indicator {
+      display:inline-block;
+      background:rgba(121,82,179,.25); border:1px dashed var(--mc);
+      border-radius:4px; padding:1px 12px;
+      color:var(--mc); font-style:italic; font-size:11px;
+      min-width:80px; text-align:center;
+    }
+
+    .q-text { font-size:.88rem; font-weight:400; line-height:1.7; color:var(--muted); margin-bottom:16px; }
+    .q-text strong { color:var(--text); font-weight:600; }
+    .q-text code { font-family:'JetBrains Mono',monospace; font-size:11px; background:var(--surface2); padding:1px 7px; border-radius:4px; color:var(--bs2); border:1px solid var(--border2); }
+
+    /* ── INPUT AREA ── */
+    .input-wrap { margin-bottom:10px; }
+
+    .input-row { display:flex; gap:10px; align-items:stretch; }
+
+    .input-shell {
+      flex:1; display:flex; align-items:center; gap:0;
+      background:#090910; border:1.5px solid var(--border2);
+      border-radius:9px; overflow:hidden;
+      transition:border-color .25s, box-shadow .25s;
+    }
+
+    .input-shell:focus-within {
+      border-color:var(--mc);
+      box-shadow:0 0 0 3px var(--mc-g);
+    }
+
+    .inp-pre {
+      font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500;
+      color:var(--muted); white-space:nowrap; padding:12px 10px 12px 16px;
+      background:rgba(255,255,255,.03); border-right:1px solid var(--border2);
+    }
+
+    .ans-inp {
+      flex:1; background:transparent; border:none; outline:none;
+      font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:500;
+      color:var(--text); padding:12px 16px;
+      caret-color:var(--mc);
+    }
+
+    .ans-inp::placeholder { color:var(--dim); font-weight:400; }
+    .ans-inp:disabled { opacity:.4; }
+
+    .btn-go {
+      padding:0 22px; border:none; border-radius:8px;
+      font-family:'Space Grotesk',sans-serif;
+      font-size:14px; font-weight:700; letter-spacing:.5px;
+      cursor:pointer; white-space:nowrap;
+      background:var(--mc); color:#fff;
+      transition:opacity .2s, transform .1s;
+      box-shadow:0 2px 12px var(--mc-g);
+      min-height:46px;
+    }
+
+    .btn-go:hover { opacity:.85; }
+    .btn-go:active { transform:scale(.96); }
+
+    /* ── HINT ── */
+    .btn-hint {
+      background:none; border:1px solid var(--border2); color:var(--muted);
+      font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600;
+      padding:5px 14px; border-radius:6px; cursor:pointer; margin-top:8px;
+      transition:all .2s; display:inline-flex; align-items:center; gap:5px;
+    }
+
+    .btn-hint:hover { border-color:var(--gold); color:var(--gold); }
+
+    .hint-box {
+      display:none; margin-top:8px; padding:11px 15px;
+      background:rgba(255,183,0,.05); border:1px solid rgba(255,183,0,.2);
+      border-radius:8px; font-size:.84rem; color:#ffe08a; line-height:1.6;
+    }
+
+    .hint-box.show { display:block; animation:fadeUp .2s ease; }
+    .hint-box code { font-family:'JetBrains Mono',monospace; font-size:11px; background:rgba(255,255,255,.08); padding:1px 6px; border-radius:4px; }
+
+    /* ── FEEDBACK ── */
+    .feedback { display:none; padding:13px 16px; border-radius:8px; font-size:.86rem; line-height:1.7; margin-top:10px; animation:fadeUp .25s ease; }
+    .feedback.show { display:block; }
+    .feedback.ok { background:var(--ok-b); border:1px solid rgba(0,229,160,.2); color:#a0f5d8; }
+    .feedback.fail { background:var(--err-b); border:1px solid rgba(255,71,87,.2); color:#ffc0c6; }
+    .fb-head { font-weight:700; margin-bottom:4px; font-size:.9rem; }
+    .feedback.ok .fb-head { color:var(--ok); }
+    .feedback.fail .fb-head { color:var(--err); }
+    .feedback code { font-family:'JetBrains Mono',monospace; font-size:11px; background:rgba(255,255,255,.08); padding:1px 6px; border-radius:4px; color:var(--bs2); }
+
+    /* ── NEXT ── */
+    .btn-next { display:none; margin-top:10px; background:transparent; border:1px solid var(--border2); color:var(--muted); font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; padding:10px 24px; border-radius:8px; cursor:pointer; transition:all .2s; }
+    .btn-next:hover { background:var(--surface2); border-color:var(--text); color:var(--text); }
+    .btn-next.show { display:inline-block; animation:fadeUp .3s ease; }
+
+    /* ── MODULE COMPLETE ── */
+    #mod-complete { display:none; animation:fadeUp .4s ease; }
+    #mod-complete.show { display:block; }
+
+    .mc-card {
+      background:var(--surface); border:1px solid var(--mc);
+      border-radius:16px; padding:40px 32px; text-align:center;
+      position:relative; overflow:hidden;
+      box-shadow:0 0 50px var(--mc-g);
+    }
+
+    .mc-card::before {
+      content:''; position:absolute; inset:0;
+      background:radial-gradient(ellipse at 50% 0%, var(--mc-b) 0%, transparent 60%);
+    }
+
+    .mc-inner { position:relative; }
+    .mc-stars { font-size:1.8rem; letter-spacing:8px; margin-bottom:14px; }
+    .mc-tag { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:4px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+    .mc-title { font-size:2rem; font-weight:700; color:var(--mc); margin-bottom:6px; }
+
+    .mc-score-row { display:flex; justify-content:center; gap:32px; margin:22px 0; }
+    .mc-stat { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .mc-num { font-size:2.6rem; font-weight:700; line-height:1; }
+    .mc-num.ok { color:var(--ok); }
+    .mc-num.err { color:var(--err); }
+    .mc-num.xp { color:var(--gold); }
+    .mc-lbl { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+    .mc-msg { font-size:.88rem; color:var(--muted); margin-bottom:24px; font-style:italic; }
+
+    .btn-continue {
+      padding:12px 36px; border:1px solid var(--mc); background:var(--mc); color:#fff;
+      font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; letter-spacing:1px;
+      border-radius:9px; cursor:pointer; text-transform:uppercase;
+      box-shadow:0 4px 20px var(--mc-g); transition:opacity .2s;
+    }
+
+    .btn-continue:hover { opacity:.85; }
+
+    /* ── FINAL ── */
+    #final-screen { display:none; animation:fadeUp .5s ease; }
+    #final-screen.show { display:block; }
+
+    .final-wrap { background:var(--surface); border:1px solid var(--border2); border-radius:18px; overflow:hidden; }
+
+    .final-banner {
+      padding:36px 32px 28px; text-align:center; position:relative; overflow:hidden;
+      background:linear-gradient(180deg, #100820 0%, #080d20 50%, #080f18 100%);
+    }
+
+    .final-banner::before {
+      content:''; position:absolute; inset:0;
+      background:radial-gradient(ellipse at 50% 100%, rgba(121,82,179,.15), transparent 60%);
+    }
+
+    .final-trophy { font-size:3rem; margin-bottom:10px; position:relative; }
+    .final-title { font-size:clamp(1.8rem,5vw,2.8rem); font-weight:700; color:var(--text); position:relative; margin-bottom:4px; }
+    .final-sub { color:var(--muted); font-size:.88rem; position:relative; }
+
+    .final-big-score {
+      font-family:'JetBrains Mono',monospace;
+      font-size:clamp(4rem,14vw,7rem); font-weight:700; line-height:1;
+      color:var(--gold); position:relative;
+      text-shadow:0 0 40px rgba(255,183,0,.3);
+    }
+
+    .final-denom { font-size:2.5rem; opacity:.35; }
+
+    .final-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--border); }
+    .final-cell { background:var(--surface); padding:18px 22px; }
+    .fc-mod { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+    .fc-score { font-size:1.5rem; font-weight:700; line-height:1; }
+    .fc-chips { display:flex; gap:4px; margin-top:5px; }
+    .fc-chip { width:18px; height:18px; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; }
+    .fc-chip.c { background:rgba(0,229,160,.12); color:var(--ok); }
+    .fc-chip.e { background:rgba(255,71,87,.12); color:var(--err); }
+
+    .final-actions { padding:24px 32px; display:flex; justify-content:center; }
+
+    .btn-restart {
+      padding:12px 28px; border-radius:9px; cursor:pointer;
+      font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; letter-spacing:.5px;
+      background:var(--gold); color:#000; border:none;
+      transition:opacity .2s; text-transform:uppercase;
+    }
+
+    .btn-restart:hover { opacity:.85; }
+
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+    @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.04)} 100%{transform:scale(1)} }
+    .shake { animation:shake .3s ease; }
+    .pop { animation:pop .3s ease; }
+
+    @media(max-width:560px) {
+      .mod-map { grid-template-columns:repeat(2,1fr); }
+      .final-grid { grid-template-columns:1fr; }
+      .hdr { flex-direction:column; }
+      .xp-panel { width:100%; max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="game-label">Bootstrap 5 · Complete o Código</div>
+      <div class="game-title">BS <em>FILL</em></div>
+    </div>
+    <div class="xp-panel">
+      <div class="xp-top">
+        <span class="xp-label">⚡ XP</span>
+        <span class="xp-num" id="xp-val">0 / 2000</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="mod-map" id="mod-map"></div>
+
+  <div class="prog" id="prog-strip">
+    <div class="prog-name" id="prog-name">—</div>
+    <div class="prog-dots" id="prog-dots"></div>
+    <div class="prog-frac" id="prog-frac">0/20</div>
+  </div>
+
+  <div class="chips" id="chip-row"></div>
+
+  <div id="q-area"></div>
+
+  <div id="mod-complete">
+    <div class="mc-card" id="mc-card">
+      <div class="mc-inner">
+        <div class="mc-stars" id="mc-stars">⭐⭐⭐</div>
+        <div class="mc-tag">Módulo Completo</div>
+        <div class="mc-title" id="mc-title">—</div>
+        <div class="mc-score-row">
+          <div class="mc-stat"><div class="mc-num ok" id="mc-ok">0</div><div class="mc-lbl">Corretas</div></div>
+          <div class="mc-stat"><div class="mc-num err" id="mc-err">0</div><div class="mc-lbl">Erradas</div></div>
+          <div class="mc-stat"><div class="mc-num xp" id="mc-xp">+0</div><div class="mc-lbl">XP</div></div>
+        </div>
+        <div class="mc-msg" id="mc-msg"></div>
+        <button class="btn-continue" id="btn-continue" onclick="startNextModule()">PRÓXIMO MÓDULO →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="final-screen">
+    <div class="final-wrap">
+      <div class="final-banner">
+        <div class="final-trophy">🏆</div>
+        <div class="final-title">Quiz Concluído!</div>
+        <div class="final-sub" id="final-sub">Resultado final</div>
+        <div class="final-big-score"><span id="f-num">0</span><span class="final-denom">/20</span></div>
+      </div>
+      <div class="final-grid" id="final-grid"></div>
+      <div class="final-actions">
+        <button class="btn-restart" onclick="restart()">↩ Reiniciar Quiz</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const MODULES = [
+  {
+    id:'grid', name:'Grid & Layout', icon:'📐',
+    color:'#7952b3', glow:'rgba(121,82,179,.22)', bg:'rgba(121,82,179,.08)',
+    questions:[
+      {
+        tag:'container',
+        title:'Container responsivo',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  Conteúdo com largura máxima responsiva
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Use a classe que cria um container com <strong>largura máxima responsiva</strong> (não ocupa 100% sempre).',
+        prefix:'class=',
+        placeholder:'container',
+        answers:['container','"container"'],
+        hint:'É a classe base de layout — não o fluid!',
+        exp:'<code>container</code> define larguras máximas por breakpoint. <code>container-fluid</code> sempre ocupa 100%. Use <code>container</code> para conteúdo centralizado com margens laterais.'
+      },
+      {
+        tag:'row + col',
+        title:'Grid de duas colunas iguais',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"container"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+    <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-sm-6"</span><span class="ct">&gt;</span>A<span class="ct">&lt;/div&gt;</span>
+    <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-sm-6"</span><span class="ct">&gt;</span>B<span class="ct">&lt;/div&gt;</span>
+  <span class="ct">&lt;/div&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'As colunas precisam estar dentro de um elemento com a classe que agrupa e alinha colunas Bootstrap.',
+        prefix:'class=',
+        placeholder:'row',
+        answers:['row','"row"'],
+        hint:'Pai direto das colunas — três letras.',
+        exp:'<code>row</code> usa <code>display:flex</code> e compensa o padding das cols com margens negativas. Colunas Bootstrap <strong>devem</strong> ser filhas diretas de um <code>.row</code>.'
+      },
+      {
+        tag:'col-md-8',
+        title:'Coluna de 2/3 em desktop',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"row"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>Conteúdo<span class="ct">&lt;/div&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-md-4"</span><span class="ct">&gt;</span>Sidebar<span class="ct">&lt;/div&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'O grid tem 12 colunas. A sidebar ocupa 4. Complete para que o conteúdo ocupe as <strong>8 colunas restantes</strong> a partir de telas <code>md</code>.',
+        prefix:'class=',
+        placeholder:'col-md-8',
+        answers:['col-md-8','"col-md-8"'],
+        hint:'12 - 4 = 8. Breakpoint md.',
+        exp:'<code>col-md-8</code> ocupa 8/12 (≈66%) em telas ≥768px. Junto com <code>col-md-4</code> completam as 12 colunas. Em mobile, ambas ficam 100%.'
+      },
+      {
+        tag:'justify-content',
+        title:'Centralizar colunas na linha',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"row <span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-4"</span><span class="ct">&gt;</span>Centralizado<span class="ct">&lt;/div&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'A coluna de 4 precisa ficar <strong>no centro</strong> da row. Qual classe Bootstrap centraliza o conteúdo horizontalmente em flex?',
+        prefix:'classe adicional:',
+        placeholder:'justify-content-center',
+        answers:['justify-content-center'],
+        hint:'Pense no justify-content do CSS, mas em formato de classe Bootstrap.',
+        exp:'<code>justify-content-center</code> aplica <code>justify-content: center</code> ao row (que é flex). Outras opções: <code>justify-content-between</code>, <code>justify-content-end</code>, etc.'
+      },
+      {
+        tag:'d-none d-md-block',
+        title:'Ocultar em mobile',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-md-3 <span class="blank-indicator">___</span> d-md-flex"</span><span class="ct">&gt;</span>
+  Só aparece em desktop
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'A coluna deve ser <strong>invisível em mobile</strong> e aparecer a partir de <code>md</code>. Complete com a classe que oculta por padrão.',
+        prefix:'classe:',
+        placeholder:'d-none',
+        answers:['d-none'],
+        hint:'Display none — em Bootstrap fica como classe utilitária.',
+        exp:'<code>d-none</code> aplica <code>display:none</code>. Combinado com <code>d-md-flex</code>, o elemento some em mobile e aparece como flex em telas md+. Visto no projeto PerfectWatch!'
+      }
+    ]
+  },
+
+  {
+    id:'components', name:'Componentes', icon:'🧩',
+    color:'#0d6efd', glow:'rgba(13,110,253,.22)', bg:'rgba(13,110,253,.08)',
+    questions:[
+      {
+        tag:'btn',
+        title:'Botão de sucesso com Bootstrap',
+        code:`<span class="ct">&lt;button</span> <span class="co">class</span>=<span class="cs">"btn <span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  Confirmar
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'Complete com a variante de botão que representa <strong>sucesso</strong> (verde) no Bootstrap.',
+        prefix:'classe:',
+        placeholder:'btn-success',
+        answers:['btn-success'],
+        hint:'Variante: success. Padrão: btn-{variante}.',
+        exp:'<code>btn-success</code> aplica o estilo verde. Sempre precisa de <code>btn</code> primeiro. Outras variantes: <code>btn-primary</code>, <code>btn-danger</code>, <code>btn-warning</code>, <code>btn-secondary</code>.'
+      },
+      {
+        tag:'card',
+        title:'Conteúdo dentro do card',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"card"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+    <span class="ct">&lt;h5</span> <span class="co">class</span>=<span class="cs">"card-title"</span><span class="ct">&gt;</span>Título<span class="ct">&lt;/h5&gt;</span>
+    <span class="ct">&lt;p</span> <span class="co">class</span>=<span class="cs">"card-text"</span><span class="ct">&gt;</span>Texto<span class="ct">&lt;/p&gt;</span>
+  <span class="ct">&lt;/div&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Toda a estrutura interna de um card Bootstrap fica dentro de uma div com qual classe?',
+        prefix:'class=',
+        placeholder:'card-body',
+        answers:['card-body','"card-body"'],
+        hint:'card + ___-body. Dois componentes: o externo (.card) e o interno.',
+        exp:'<code>card-body</code> aplica padding interno e agrupa o conteúdo. Outros elementos do card: <code>card-header</code>, <code>card-footer</code>, <code>card-img-top</code>.'
+      },
+      {
+        tag:'navbar-toggler',
+        title:'Botão de menu mobile',
+        code:`<span class="ct">&lt;button</span> <span class="co">class</span>=<span class="cs">"navbar-toggler"</span>
+        <span class="co">data-bs-toggle</span>=<span class="cs">"collapse"</span>
+        <span class="co">data-bs-target</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;span</span> <span class="co">class</span>=<span class="cs">"navbar-toggler-icon"</span><span class="ct">&gt;&lt;/span&gt;</span>
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'O botão toggler precisa apontar para o elemento colapsável. Se o menu tem <code>id="navbarNav"</code>, qual é o valor do <code>data-bs-target</code>?',
+        prefix:'data-bs-target=',
+        placeholder:'#navbarNav',
+        answers:['#navbarNav','"#navbarNav"'],
+        hint:'O seletor CSS de um ID usa #. Igual ao querySelector.',
+        exp:'<code>#navbarNav</code> — o prefixo <code>#</code> indica que é um ID. É exatamente um seletor CSS. O elemento com esse ID deve ter a classe <code>collapse navbar-collapse</code>.'
+      },
+      {
+        tag:'modal trigger',
+        title:'Abrir modal com botão',
+        code:`<span class="ct">&lt;button</span> <span class="co">class</span>=<span class="cs">"btn btn-primary"</span>
+        <span class="co">data-bs-toggle</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span>
+        <span class="co">data-bs-target</span>=<span class="cs">"#meuModal"</span><span class="ct">&gt;</span>
+  Abrir
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'Para o botão acionar o modal, o <code>data-bs-toggle</code> precisa indicar o tipo de componente. Qual valor usar?',
+        prefix:'data-bs-toggle=',
+        placeholder:'modal',
+        answers:['modal','"modal"'],
+        hint:'É o nome do componente Bootstrap em minúsculas.',
+        exp:'<code>data-bs-toggle="modal"</code> indica ao Bootstrap que este botão deve acionar um Modal. Para carousel seria <code>carousel</code>, para collapse seria <code>collapse</code>, etc.'
+      },
+      {
+        tag:'carousel slide',
+        title:'Container do carousel',
+        code:`<span class="ct">&lt;div</span> <span class="co">id</span>=<span class="cs">"slider"</span>
+     <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span>
+     <span class="co">data-bs-ride</span>=<span class="cs">"carousel"</span><span class="ct">&gt;</span>`,
+        text:'Quais são as <strong>duas classes</strong> que todo container de carousel Bootstrap precisa ter? (separadas por espaço)',
+        prefix:'class=',
+        placeholder:'carousel slide',
+        answers:['carousel slide','"carousel slide"'],
+        hint:'Uma dá o nome do componente, a outra define a animação de transição.',
+        exp:'<code>carousel</code> é a classe base do componente; <code>slide</code> ativa a animação de transição deslizante entre slides. Sem <code>slide</code>, os slides mudam sem animação.'
+      }
+    ]
+  },
+
+  {
+    id:'utilities', name:'Utilitários CSS', icon:'🎨',
+    color:'#198754', glow:'rgba(25,135,84,.22)', bg:'rgba(25,135,84,.08)',
+    questions:[
+      {
+        tag:'mt / mb / ms',
+        title:'Margem inferior de 3 unidades',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"card <span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  Card com espaço abaixo
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Adicione uma margem na parte <strong>inferior</strong> do card equivalente a <strong>1rem</strong> (escala 3 do Bootstrap).',
+        prefix:'classe:',
+        placeholder:'mb-3',
+        answers:['mb-3'],
+        hint:'m = margin, b = bottom, 3 = 1rem.',
+        exp:'<code>mb-3</code> = <code>margin-bottom: 1rem</code>. Escala: 0=0, 1=.25rem, 2=.5rem, <strong>3=1rem</strong>, 4=1.5rem, 5=3rem. "b" = bottom, "t" = top, "s" = start (esq), "e" = end (dir).'
+      },
+      {
+        tag:'d-flex',
+        title:'Ativar flexbox em um elemento',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"container <span class="blank-indicator">___</span> justify-content-center"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;button&gt;</span>A<span class="ct">&lt;/button&gt;</span>
+  <span class="ct">&lt;button&gt;</span>B<span class="ct">&lt;/button&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Para que <code>justify-content-center</code> funcione, o container precisa ter <code>display:flex</code>. Qual classe Bootstrap faz isso?',
+        prefix:'classe:',
+        placeholder:'d-flex',
+        answers:['d-flex'],
+        hint:'d = display, flex = flex. Bem literal!',
+        exp:'<code>d-flex</code> aplica <code>display:flex</code>. Sem ela, <code>justify-content-center</code> não tem efeito. Variações: <code>d-block</code>, <code>d-inline</code>, <code>d-grid</code>, <code>d-none</code>.'
+      },
+      {
+        tag:'text-center',
+        title:'Centralizar texto',
+        code:`<span class="ct">&lt;footer</span> <span class="co">class</span>=<span class="cs">"bg-dark <span class="blank-indicator">___</span> py-3"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;p&gt;</span>© 2025 Meu Site<span class="ct">&lt;/p&gt;</span>
+<span class="ct">&lt;/footer&gt;</span>`,
+        text:'O footer precisa ter o texto <strong>centralizado</strong>. Qual classe Bootstrap faz isso?',
+        prefix:'classe:',
+        placeholder:'text-center',
+        answers:['text-center'],
+        hint:'text + alinhamento. Centralizado em inglês = center.',
+        exp:'<code>text-center</code> aplica <code>text-align: center</code>. Outros: <code>text-start</code> (esquerda) e <code>text-end</code> (direita). Todos responsivos: <code>text-md-center</code>.'
+      },
+      {
+        tag:'bg-dark text-white',
+        title:'Fundo escuro com texto branco',
+        code:`<span class="ct">&lt;nav</span> <span class="co">class</span>=<span class="cs">"navbar <span class="blank-indicator">___</span> <span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  <span class="cm">&lt;!-- navbar escura com texto branco --&gt;</span>
+<span class="ct">&lt;/nav&gt;</span>`,
+        text:'Complete com as duas classes: uma para fundo escuro (<code>dark</code>) e outra para texto branco (<code>white</code>).',
+        prefix:'classes:',
+        placeholder:'bg-dark text-white',
+        answers:['bg-dark text-white','text-white bg-dark'],
+        hint:'bg-{cor} para fundo, text-{cor} para texto.',
+        exp:'<code>bg-dark</code> aplica fundo escuro e <code>text-white</code> força texto branco (necessário porque <code>bg-dark</code> não muda a cor do texto automaticamente no Bootstrap 5).'
+      },
+      {
+        tag:'bi bi-search',
+        title:'Ícone de pesquisa com Bootstrap Icons',
+        code:`<span class="ct">&lt;button</span> <span class="co">class</span>=<span class="cs">"btn btn-primary"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;i</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;&lt;/i&gt;</span>
+  Pesquisar
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'Para usar o ícone de <strong>lupa (search)</strong> do Bootstrap Icons, qual valor vai no atributo class do <code>&lt;i&gt;</code>?',
+        prefix:'class=',
+        placeholder:'bi bi-search',
+        answers:['bi bi-search','"bi bi-search"'],
+        hint:'Todo ícone Bootstrap começa com "bi" depois "bi-nome-do-icone".',
+        exp:'<code>bi bi-search</code> — a classe <code>bi</code> carrega a fonte de ícones e <code>bi-search</code> seleciona o ícone específico. Outros: <code>bi-trash</code>, <code>bi-person</code>, <code>bi-envelope</code>.'
+      }
+    ]
+  },
+
+  {
+    id:'forms', name:'Forms & Inputs', icon:'📝',
+    color:'#dc3545', glow:'rgba(220,53,69,.22)', bg:'rgba(220,53,69,.08)',
+    questions:[
+      {
+        tag:'form-control',
+        title:'Estilizar um input Bootstrap',
+        code:`<span class="ct">&lt;input</span> <span class="co">type</span>=<span class="cs">"email"</span>
+       <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span>
+       <span class="co">placeholder</span>=<span class="cs">"seu@email.com"</span><span class="ct">&gt;</span>`,
+        text:'Qual classe Bootstrap aplica o estilo padrão de input (borda, padding, focus etc.) a um campo de formulário?',
+        prefix:'class=',
+        placeholder:'form-control',
+        answers:['form-control','"form-control"'],
+        hint:'form + control — controla o estilo do campo.',
+        exp:'<code>form-control</code> é a classe fundamental para inputs Bootstrap. Aplica largura 100%, padding, borda, e o efeito de foco azul. Funciona em <code>input</code>, <code>textarea</code> e <code>select</code>.'
+      },
+      {
+        tag:'form-label',
+        title:'Label de formulário',
+        code:`<span class="ct">&lt;label</span> <span class="co">for</span>=<span class="cs">"email"</span>
+        <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  Email
+<span class="ct">&lt;/label&gt;</span>
+<span class="ct">&lt;input</span> <span class="co">id</span>=<span class="cs">"email"</span> <span class="co">class</span>=<span class="cs">"form-control"</span><span class="ct">&gt;</span>`,
+        text:'Qual classe Bootstrap aplica o estilo correto de espaçamento e peso de fonte ao elemento <code>&lt;label&gt;</code>?',
+        prefix:'class=',
+        placeholder:'form-label',
+        answers:['form-label','"form-label"'],
+        hint:'Mesmo padrão: form-{elemento}.',
+        exp:'<code>form-label</code> adiciona <code>margin-bottom: 0.5rem</code> e o peso de fonte correto. Junto com <code>for</code> apontando para o <code>id</code> do input, melhora a acessibilidade.'
+      },
+      {
+        tag:'input-group',
+        title:'Input com ícone prefixado',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;span</span> <span class="co">class</span>=<span class="cs">"input-group-text"</span><span class="ct">&gt;</span>
+    <span class="ct">&lt;i</span> <span class="co">class</span>=<span class="cs">"bi bi-person"</span><span class="ct">&gt;&lt;/i&gt;</span>
+  <span class="ct">&lt;/span&gt;</span>
+  <span class="ct">&lt;input</span> <span class="co">class</span>=<span class="cs">"form-control"</span> <span class="co">placeholder</span>=<span class="cs">"Username"</span><span class="ct">&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Qual classe Bootstrap agrupa um input com um elemento de prefixo (ícone ou texto)?',
+        prefix:'class=',
+        placeholder:'input-group',
+        answers:['input-group','"input-group"'],
+        hint:'input + group — agrupa elementos de input.',
+        exp:'<code>input-group</code> é o container que permite combinar um <code>input</code> com prefixos/sufixos (<code>input-group-text</code>). Muito usado com ícones e botões dentro de campos de formulário.'
+      },
+      {
+        tag:'mb-3',
+        title:'Espaçamento entre campos',
+        code:`<span class="ct">&lt;form&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span><span class="ct">&gt;</span>
+    <span class="ct">&lt;label</span> <span class="co">class</span>=<span class="cs">"form-label"</span><span class="ct">&gt;</span>Nome<span class="ct">&lt;/label&gt;</span>
+    <span class="ct">&lt;input</span> <span class="co">class</span>=<span class="cs">"form-control"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;/div&gt;</span>
+  <span class="cm">&lt;!-- próximo campo --&gt;</span>
+<span class="ct">&lt;/form&gt;</span>`,
+        text:'Cada campo de formulário fica dentro de um <code>div</code> que precisa de <strong>margem inferior</strong> de 1rem (escala 3). Qual classe usar no div?',
+        prefix:'class=',
+        placeholder:'mb-3',
+        answers:['mb-3','"mb-3"'],
+        hint:'margin-bottom escala 3. Você já viu isso no módulo anterior!',
+        exp:'<code>mb-3</code> no container de cada campo é o padrão Bootstrap para formulários — garante espaçamento vertical consistente entre os campos. Visto em todos os exemplos de formulário da aula.'
+      },
+      {
+        tag:'btn-close + data-bs-dismiss',
+        title:'Botão de fechar alert',
+        code:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"alert alert-success alert-dismissible"</span><span class="ct">&gt;</span>
+  Operação realizada!
+  <span class="ct">&lt;button</span> <span class="co">class</span>=<span class="cs">"<span class="blank-indicator">___</span>"</span>
+          <span class="co">data-bs-dismiss</span>=<span class="cs">"alert"</span><span class="ct">&gt;&lt;/button&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'O botão de fechar um alert Bootstrap usa uma classe específica que renderiza o "X". Qual é essa classe?',
+        prefix:'class=',
+        placeholder:'btn-close',
+        answers:['btn-close','"btn-close"'],
+        hint:'É um botão de fechar — btn + close.',
+        exp:'<code>btn-close</code> renderiza o ícone "×" como botão de fechar. Junto com <code>data-bs-dismiss="alert"</code> e a classe <code>alert-dismissible</code> no container, forma o padrão completo de alert fechável.'
+      }
+    ]
+  }
+];
+
+let modIdx=0, qIdx=0, totalXP=0, phase='quiz';
+const MAX_XP=2000, results=[[],[],[],[]];
+
+function applyTheme(mod) {
+  const r=document.documentElement.style;
+  r.setProperty('--mc',mod.color);
+  r.setProperty('--mc-g',mod.glow);
+  r.setProperty('--mc-b',mod.bg);
+}
+
+function renderModMap() {
+  document.getElementById('mod-map').innerHTML=MODULES.map((m,i)=>{
+    const done=i<modIdx, active=i===modIdx&&phase==='quiz', locked=i>modIdx;
+    const cls=done?'done':active?'active':'';
+    return `<div class="mod-card ${cls}" style="--mc:${m.color}">
+      <div class="mod-lock">${locked?'🔒':''}</div>
+      <div class="mod-icon">${m.icon}</div>
+      <div class="mod-name">${m.name}</div>
+      <div class="mod-score">${done?`${results[i].filter(Boolean).length}/5 ✓`:active?'EM JOGO':'—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderChips() {
+  const row=document.getElementById('chip-row');
+  row.innerHTML='';
+  MODULES.forEach((m,mi)=>{
+    if(mi>0){const s=document.createElement('div');s.className='chip sep';row.appendChild(s);}
+    m.questions.forEach((_,qi)=>{
+      const d=document.createElement('div');
+      d.className='chip';d.id=`chip-${mi*5+qi}`;d.textContent=qi+1;
+      const res=results[mi][qi];
+      if(res===true)d.classList.add('c');
+      if(res===false)d.classList.add('e');
+      if(mi===modIdx&&qi===qIdx&&phase==='quiz'){d.style.borderColor=m.color;d.style.color=m.color;}
+      row.appendChild(d);
+    });
+  });
+}
+
+function markChip(mi,qi,ok){
+  const d=document.getElementById(`chip-${mi*5+qi}`);
+  if(!d)return;
+  d.classList.remove('c','e');d.classList.add(ok?'c':'e');
+  d.style.borderColor='';d.style.color='';d.textContent=ok?'✓':'✗';
+}
+
+function renderProg(){
+  const mod=MODULES[modIdx],total=modIdx*5+qIdx;
+  document.getElementById('prog-name').textContent=mod.name;
+  document.getElementById('prog-frac').textContent=`${Math.min(total,20)}/20`;
+  document.getElementById('prog-dots').innerHTML=Array.from({length:5},(_,i)=>{
+    const cls=i<qIdx?'done':i===qIdx?'active':'';
+    return `<div class="pdot ${cls}"></div>`;
+  }).join('');
+}
+
+function addXP(v){
+  totalXP=Math.min(totalXP+v,MAX_XP);
+  document.getElementById('xp-fill').style.width=(totalXP/MAX_XP*100)+'%';
+  document.getElementById('xp-val').textContent=`${totalXP} / ${MAX_XP}`;
+}
+
+function renderQuestion(){
+  const mod=MODULES[modIdx],q=mod.questions[qIdx];
+  applyTheme(mod);
+  renderModMap();renderChips();renderProg();
+
+  const pfxHtml=q.prefix?`<span class="inp-pre">${q.prefix}</span>`:'';
+
+  document.getElementById('q-area').innerHTML=`
+    <div class="q-card" id="active-card">
+      <div class="q-head">
+        <span class="q-badge">Módulo ${modIdx+1} · Questão ${qIdx+1}/5</span>
+        <span class="q-tag">${q.tag}</span>
+      </div>
+      <div class="q-body">
+        <div class="q-title">${q.title}</div>
+        <div class="code-block">${q.code}</div>
+        <p class="q-text">${q.text}</p>
+        <div class="input-wrap">
+          <div class="input-row">
+            <div class="input-shell">
+              ${pfxHtml}
+              <input class="ans-inp" id="ans" type="text"
+                placeholder="${q.placeholder}"
+                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+            </div>
+            <button class="btn-go" onclick="checkAnswer()">↵ OK</button>
+          </div>
+          <button class="btn-hint" onclick="toggleHint()">💡 Dica</button>
+          <div class="hint-box" id="hint-box">${q.hint}</div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <button class="btn-next" id="btn-next" onclick="advanceQuestion()">
+          ${qIdx<4?'Próxima →':'Finalizar Módulo →'}
+        </button>
+      </div>
+    </div>`;
+
+  const inp=document.getElementById('ans');
+  inp.focus();
+  setTimeout(()=>{ inp.placeholder=''; }, 2000);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')checkAnswer();});
+}
+
+function toggleHint(){
+  document.getElementById('hint-box').classList.toggle('show');
+}
+
+function checkAnswer(){
+  const inp=document.getElementById('ans');
+  const fb=document.getElementById('feedback');
+  const btn=document.getElementById('btn-next');
+  if(btn.classList.contains('show'))return;
+  const val=inp.value.trim();
+  if(!val)return;
+
+  const mod=MODULES[modIdx],q=mod.questions[qIdx];
+  const ok=q.answers.includes(val);
+  results[modIdx][qIdx]=ok;
+  markChip(modIdx,qIdx,ok);
+
+  const card=document.getElementById('active-card');
+  if(ok){
+    addXP(80);
+    card.classList.add('c-ok','pop');
+    setTimeout(()=>card.classList.remove('pop'),300);
+    fb.className='feedback ok show';
+    fb.innerHTML=`<div class="fb-head">✓ Correto! +80 XP</div>${q.exp}`;
+  } else {
+    card.classList.add('c-err','shake');
+    setTimeout(()=>card.classList.remove('shake'),300);
+    const correct=q.prefix?`${q.prefix} ${q.answers[0]}`:q.answers[0];
+    fb.className='feedback fail show';
+    fb.innerHTML=`<div class="fb-head">✗ Resposta incorreta</div>Correto: <code>${q.answers[0]}</code><br><br>${q.exp}`;
+  }
+  inp.disabled=true;
+  btn.classList.add('show');
+}
+
+function advanceQuestion(){
+  if(qIdx<4){qIdx++;document.getElementById('q-area').innerHTML='';renderQuestion();}
+  else{showModComplete();}
+}
+
+function showModComplete(){
+  phase='mod-complete';
+  document.getElementById('q-area').innerHTML='';
+  const mod=MODULES[modIdx],res=results[modIdx];
+  const ok=res.filter(Boolean).length,pct=ok/5;
+  applyTheme(mod);
+  const mc=document.getElementById('mc-card');
+  mc.style.setProperty('--mc',mod.color);mc.style.setProperty('--mc-g',mod.glow);mc.style.setProperty('--mc-b',mod.bg);
+  document.getElementById('mc-stars').textContent=pct===1?'⭐⭐⭐':pct>=.6?'⭐⭐':'⭐';
+  document.getElementById('mc-title').textContent=mod.name;
+  document.getElementById('mc-ok').textContent=ok;
+  document.getElementById('mc-err').textContent=5-ok;
+  document.getElementById('mc-xp').textContent=`+${ok*80}`;
+  const msgs=[[1,'Perfeito! Módulo dominado.'],[.8,'Muito bem!'],[.6,'Bom progresso!'],[0,'Continue praticando!']];
+  document.getElementById('mc-msg').textContent=msgs.find(([t])=>pct>=t)[1];
+  const isLast=modIdx===MODULES.length-1;
+  document.getElementById('btn-continue').textContent=isLast?'VER RESULTADO FINAL →':'PRÓXIMO MÓDULO →';
+  document.getElementById('mod-complete').classList.add('show');
+  renderModMap();renderChips();
+}
+
+function startNextModule(){
+  document.getElementById('mod-complete').classList.remove('show');
+  phase='quiz';
+  if(modIdx===MODULES.length-1){showFinal();return;}
+  modIdx++;qIdx=0;renderQuestion();
+}
+
+function showFinal(){
+  phase='final';
+  document.getElementById('q-area').innerHTML='';
+  const totalOk=results.flat().filter(Boolean).length;
+  document.getElementById('f-num').textContent=totalOk;
+  const pct=totalOk/20;
+  const subs=[[1,'🏆 Perfeito!'],[.85,'🔥 Excelente!'],[.7,'👍 Muito bom!'],[.5,'💪 Bom início!'],[0,'📚 Continue praticando!']];
+  document.getElementById('final-sub').textContent=subs.find(([t])=>pct>=t)[1];
+  document.getElementById('final-grid').innerHTML=MODULES.map((m,i)=>{
+    const res=results[i],ok=res.filter(Boolean).length;
+    const color=ok===5?'var(--ok)':ok>=3?m.color:'var(--err)';
+    return `<div class="final-cell">
+      <div class="fc-mod" style="color:${m.color}">${m.icon} ${m.name}</div>
+      <div class="fc-score" style="color:${color}">${ok}/5</div>
+      <div class="fc-chips">${res.map(r=>`<div class="fc-chip ${r?'c':'e'}">${r?'✓':'✗'}</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('final-screen').classList.add('show');
+  modIdx=MODULES.length;renderModMap();renderChips();
+}
+
+function restart(){
+  modIdx=0;qIdx=0;totalXP=0;phase='quiz';
+  results.forEach(r=>r.length=0);
+  document.getElementById('xp-fill').style.width='0%';
+  document.getElementById('xp-val').textContent='0 / 2000';
+  document.getElementById('final-screen').classList.remove('show');
+  document.getElementById('mod-complete').classList.remove('show');
+  applyTheme(MODULES[0]);renderQuestion();
+}
+
+applyTheme(MODULES[0]);
+renderQuestion();
+</script>
+</body>
+</html>

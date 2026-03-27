@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bootstrap Quiz — Múltipla Escolha</title>
+
+ <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 118 94'><rect width='118' height='94' rx='24' fill='%237952b3'/><path fill='white' d='M18 73V21h27q8 0 13.5 4.5T64 38q0 6-2.5 9.5T55 52q5 1.5 8 5.5t3 10q0 8-5.5 12T43 84H18zm13-30h13q5 0 7.5-2t2.5-6q0-4-2.5-6T44 27H31zm0 20h14q5 0 8-2.5t3-7q0-4-3-6.5T45 45H31zM92 73H80V27h-7v-6h19z'/></svg>">
+ 
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #f5f0e8;
+      --surface: #fdfaf5;
+      --surface2:#ede8dc;
+      --border:  #d4c9b5;
+      --border2: #c2b59f;
+      --ink:     #1a1612;
+      --muted:   #7a6f62;
+      --dim:     #b5a898;
+
+      --bs:      #7952b3;   /* Bootstrap purple */
+      --bs-glow: rgba(121,82,179,.2);
+      --bs-bg:   rgba(121,82,179,.07);
+      --bs-light:#9b72d4;
+
+      --ok:   #1a7a4a;
+      --ok-bg:rgba(26,122,74,.09);
+      --err:  #b83232;
+      --err-bg:rgba(184,50,50,.08);
+      --gold: #c17f24;
+
+      --mc: #7952b3;
+      --mc-glow: rgba(121,82,179,.2);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      min-height:100vh;
+    }
+
+    /* paper grain */
+    body::before {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity:.6;
+    }
+
+    /* horizontal rule lines like graph paper */
+    body::after {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(180,160,130,.12) 28px);
+    }
+
+    .app { position:relative; z-index:1; max-width:760px; margin:0 auto; padding:32px 24px 100px; }
+
+    /* ── HEADER ── */
+    .hdr { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:32px; flex-wrap:wrap; }
+
+    .hdr-left { display:flex; flex-direction:column; gap:6px; }
+
+    .game-eyebrow {
+      font-family:'DM Mono',monospace; font-size:10px; font-weight:500;
+      letter-spacing:3px; text-transform:uppercase; color:var(--muted);
+      display:flex; align-items:center; gap:8px;
+    }
+
+    .game-eyebrow::before {
+      content:''; display:block; width:18px; height:2px;
+      background:var(--bs); border-radius:1px;
+    }
+
+    .game-title {
+      font-family:'Syne',sans-serif;
+      font-size:clamp(2rem,6vw,3.2rem);
+      font-weight:900; line-height:.95; letter-spacing:-2px;
+      color:var(--ink);
+    }
+
+    .game-title em { color:var(--bs); font-style:normal; }
+
+    .xp-panel {
+      background:var(--surface); border:1.5px solid var(--border);
+      border-radius:12px; padding:14px 18px; min-width:200px;
+    }
+
+    .xp-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+
+    .xp-label {
+      font-family:'Syne',sans-serif; font-size:11px; font-weight:800;
+      letter-spacing:2px; text-transform:uppercase; color:var(--gold);
+    }
+
+    .xp-num { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); }
+
+    .xp-track { height:6px; background:var(--surface2); border-radius:3px; border:1px solid var(--border); overflow:hidden; }
+
+    .xp-fill {
+      height:100%; background:linear-gradient(90deg, var(--bs), var(--bs-light));
+      border-radius:3px; transition:width .5s cubic-bezier(.4,0,.2,1); width:0%;
+    }
+
+    /* ── MODULE MAP ── */
+    .mod-map { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:24px; }
+
+    .mod-card {
+      background:var(--surface); border:1.5px solid var(--border);
+      border-radius:10px; padding:12px 8px; text-align:center;
+      position:relative; overflow:hidden; transition:all .3s;
+    }
+
+    .mod-card::after {
+      content:''; position:absolute; bottom:0; left:0; right:0;
+      height:3px; background:var(--mc,transparent); opacity:0; transition:opacity .3s;
+    }
+
+    .mod-card.active { border-color:var(--mc); background:var(--bs-bg); }
+    .mod-card.active::after { opacity:1; }
+    .mod-card.done { border-color:rgba(26,122,74,.35); background:rgba(26,122,74,.04); }
+    .mod-card.done::after { background:var(--ok); opacity:1; }
+
+    .mod-icon { font-size:1.3rem; margin-bottom:4px; filter:grayscale(1) opacity(.4); transition:all .3s; }
+    .mod-card.active .mod-icon, .mod-card.done .mod-icon { filter:none; }
+
+    .mod-name {
+      font-family:'DM Mono',monospace; font-size:9px; font-weight:500;
+      letter-spacing:1px; text-transform:uppercase; color:var(--muted); transition:color .3s;
+    }
+
+    .mod-card.active .mod-name { color:var(--mc); }
+    .mod-card.done .mod-name { color:var(--ok); }
+
+    .mod-score { font-family:'DM Mono',monospace; font-size:10px; color:var(--dim); margin-top:3px; }
+    .mod-card.done .mod-score { color:var(--ok); }
+
+    .mod-lock { position:absolute; top:5px; right:7px; font-size:9px; color:var(--dim); }
+    .mod-card.active .mod-lock, .mod-card.done .mod-lock { display:none; }
+
+    /* ── PROGRESS ── */
+    .prog { background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; gap:14px; }
+
+    .prog-name { font-family:'Syne',sans-serif; font-weight:800; font-size:.95rem; min-width:105px; color:var(--mc,var(--ink)); transition:color .3s; }
+
+    .prog-dots { display:flex; gap:5px; flex:1; }
+
+    .pdot { flex:1; height:4px; border-radius:2px; background:var(--surface2); border:1px solid var(--border); transition:all .3s; }
+    .pdot.done { background:var(--mc,var(--ok)); border-color:var(--mc,var(--ok)); }
+    .pdot.active { background:var(--mc,var(--ok)); border-color:var(--mc,var(--ok)); opacity:.5; }
+
+    .prog-frac { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+
+    /* ── CHIPS ── */
+    .chips { display:flex; gap:5px; margin-bottom:20px; flex-wrap:wrap; }
+
+    .chip {
+      width:30px; height:30px; border-radius:6px;
+      border:1.5px solid var(--border); background:var(--surface);
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Syne',sans-serif; font-size:12px; font-weight:800;
+      color:var(--muted); transition:all .3s;
+    }
+
+    .chip.c { background:rgba(26,122,74,.1); border-color:rgba(26,122,74,.5); color:var(--ok); }
+    .chip.e { background:rgba(184,50,50,.1); border-color:rgba(184,50,50,.5); color:var(--err); }
+    .chip.sep { width:1px; border:none; border-left:1.5px solid var(--border2); background:transparent; }
+
+    /* ── QUESTION CARD ── */
+    .q-card {
+      background:var(--surface); border:1.5px solid var(--border);
+      border-radius:16px; overflow:hidden;
+      box-shadow: 4px 4px 0 var(--border);
+      animation:slideUp .3s cubic-bezier(.4,0,.2,1);
+    }
+
+    @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+    .q-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 22px; border-bottom:1.5px solid var(--border);
+      background:var(--surface2);
+    }
+
+    .q-badge {
+      font-family:'DM Mono',monospace; font-size:10px; font-weight:500;
+      letter-spacing:2px; text-transform:uppercase; color:var(--muted);
+    }
+
+    .q-tag {
+      font-family:'DM Mono',monospace; font-size:11px;
+      padding:3px 12px; border-radius:20px;
+      border:1.5px solid var(--mc,var(--border));
+      background:var(--bs-bg); color:var(--mc,var(--muted));
+      transition:all .3s;
+    }
+
+    .q-body { padding:24px 24px 20px; }
+
+    .q-title {
+      font-family:'Syne',sans-serif; font-size:1.35rem; font-weight:800;
+      line-height:1.2; margin-bottom:12px; color:var(--ink);
+    }
+
+    .code-block {
+      background:var(--ink); border-radius:8px;
+      padding:16px 18px; margin-bottom:16px;
+      font-family:'DM Mono',monospace; font-size:12.5px; line-height:1.9;
+      white-space:pre; overflow-x:auto;
+      border-left:3px solid var(--mc,var(--bs));
+    }
+
+    .ck{color:#c792ea} .cf{color:#82aaff} .cs{color:#c3e88d}
+    .co{color:#ffcb6b} .cm{color:#444466;font-style:italic} .ct{color:#89ddff}
+
+    .q-text { font-size:.92rem; font-weight:400; line-height:1.7; color:var(--muted); margin-bottom:20px; }
+    .q-text strong { color:var(--ink); font-weight:500; }
+    .q-text code { font-family:'DM Mono',monospace; font-size:11.5px; background:var(--surface2); padding:1px 7px; border-radius:4px; color:var(--bs); border:1px solid var(--border); }
+
+    /* ── OPTIONS ── */
+    .options { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
+
+    .opt {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px; border-radius:10px;
+      border:1.5px solid var(--border);
+      background:var(--surface);
+      cursor:pointer;
+      transition:all .2s;
+    }
+
+    .opt:hover:not(.disabled) {
+      border-color:var(--mc,var(--bs));
+      background:var(--bs-bg);
+      transform:translateX(3px);
+    }
+
+    .opt.selected:not(.disabled) {
+      border-color:var(--mc,var(--bs));
+      background:var(--bs-bg);
+      box-shadow:3px 3px 0 var(--mc,var(--bs));
+    }
+
+    .opt.disabled { cursor:default; pointer-events:none; }
+
+    .opt.correct {
+      border-color:var(--ok) !important; background:var(--ok-bg) !important;
+      box-shadow:3px 3px 0 var(--ok) !important;
+    }
+
+    .opt.wrong {
+      border-color:var(--err) !important; background:var(--err-bg) !important;
+    }
+
+    .opt.reveal-correct {
+      border-color:rgba(26,122,74,.5) !important;
+      background:rgba(26,122,74,.04) !important;
+    }
+
+    .opt-letter {
+      width:28px; height:28px; border-radius:6px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Syne',sans-serif; font-size:13px; font-weight:800;
+      background:var(--surface2); color:var(--muted);
+      border:1.5px solid var(--border); transition:all .2s;
+    }
+
+    .opt.selected:not(.disabled) .opt-letter {
+      background:var(--mc,var(--bs)); color:#fff; border-color:var(--mc,var(--bs));
+    }
+
+    .opt.correct .opt-letter { background:var(--ok) !important; color:#fff !important; border-color:var(--ok) !important; }
+    .opt.wrong .opt-letter { background:var(--err) !important; color:#fff !important; border-color:var(--err) !important; }
+    .opt.reveal-correct .opt-letter { background:rgba(26,122,74,.15) !important; color:var(--ok) !important; border-color:var(--ok) !important; }
+
+    .opt-text { font-size:.9rem; line-height:1.4; flex:1; color:var(--ink); }
+    .opt-text code { font-family:'DM Mono',monospace; font-size:11px; background:var(--surface2); padding:1px 6px; border-radius:4px; color:var(--bs); border:1px solid var(--border); }
+
+    .opt-icon { font-size:15px; opacity:0; transition:opacity .2s; margin-left:auto; }
+    .opt.correct .opt-icon, .opt.wrong .opt-icon, .opt.reveal-correct .opt-icon { opacity:1; }
+
+    /* ── CONFIRM ── */
+    .btn-confirm {
+      width:100%; padding:12px; border:2px solid var(--mc,var(--bs));
+      border-radius:10px; background:transparent;
+      font-family:'Syne',sans-serif; font-size:15px; font-weight:800;
+      letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+      color:var(--mc,var(--bs));
+      transition:all .2s; margin-bottom:10px;
+      box-shadow:3px 3px 0 var(--mc,var(--bs));
+      opacity:.35;
+    }
+
+    .btn-confirm.ready {
+      opacity:1; background:var(--mc,var(--bs)); color:#fff;
+    }
+
+    .btn-confirm.ready:hover { opacity:.85; }
+    .btn-confirm:disabled { cursor:default; }
+
+    /* ── FEEDBACK ── */
+    .feedback { display:none; padding:14px 18px; border-radius:10px; font-size:.88rem; line-height:1.7; margin-top:4px; animation:slideUp .2s ease; }
+    .feedback.show { display:block; }
+
+    .feedback.ok { background:var(--ok-bg); border:1.5px solid rgba(26,122,74,.3); color:#1a4a2f; }
+    .feedback.fail { background:var(--err-bg); border:1.5px solid rgba(184,50,50,.3); color:#6b1e1e; }
+
+    .fb-head { font-family:'Syne',sans-serif; font-weight:800; margin-bottom:4px; font-size:.95rem; }
+    .feedback.ok .fb-head { color:var(--ok); }
+    .feedback.fail .fb-head { color:var(--err); }
+    .feedback code { font-family:'DM Mono',monospace; font-size:11px; background:rgba(255,255,255,.5); padding:1px 6px; border-radius:4px; border:1px solid rgba(0,0,0,.1); }
+
+    /* ── NEXT ── */
+    .btn-next {
+      display:none; margin-top:10px; width:100%; padding:11px;
+      border:1.5px solid var(--border2); background:transparent;
+      color:var(--muted); font-family:'Syne',sans-serif;
+      font-size:14px; font-weight:700; letter-spacing:1px;
+      border-radius:10px; cursor:pointer; transition:all .2s;
+    }
+
+    .btn-next:hover { background:var(--surface2); border-color:var(--ink); color:var(--ink); }
+    .btn-next.show { display:block; animation:slideUp .3s ease; }
+
+    /* ── MODULE COMPLETE ── */
+    #mod-complete { display:none; animation:slideUp .4s ease; }
+    #mod-complete.show { display:block; }
+
+    .mc-card {
+      background:var(--surface); border:2px solid var(--mc,var(--bs));
+      border-radius:18px; padding:44px 36px; text-align:center;
+      position:relative; overflow:hidden;
+      box-shadow:6px 6px 0 var(--mc,var(--bs));
+    }
+
+    .mc-card::before {
+      content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%);
+      width:300px; height:300px; border-radius:50%;
+      background:radial-gradient(circle, var(--mc-glow,rgba(121,82,179,.12)) 0%, transparent 70%);
+      pointer-events:none;
+    }
+
+    .mc-stars { font-size:2rem; letter-spacing:10px; margin-bottom:14px; }
+    .mc-tag { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:4px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+    .mc-title { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:900; color:var(--mc,var(--bs)); margin-bottom:6px; }
+
+    .mc-score-row { display:flex; justify-content:center; gap:32px; margin:24px 0; }
+    .mc-stat { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .mc-num { font-family:'Syne',sans-serif; font-size:2.8rem; font-weight:900; line-height:1; }
+    .mc-num.ok { color:var(--ok); }
+    .mc-num.err { color:var(--err); }
+    .mc-num.xp { color:var(--gold); }
+    .mc-lbl { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+
+    .mc-msg { font-size:.9rem; color:var(--muted); margin-bottom:28px; font-style:italic; }
+
+    .btn-continue {
+      padding:13px 40px; border:2px solid var(--mc,var(--bs));
+      background:var(--mc,var(--bs)); color:#fff;
+      font-family:'Syne',sans-serif; font-size:16px; font-weight:800; letter-spacing:2px;
+      border-radius:10px; cursor:pointer; text-transform:uppercase;
+      box-shadow:4px 4px 0 var(--border2); transition:all .2s;
+    }
+
+    .btn-continue:hover { opacity:.85; transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--border2); }
+
+    /* ── FINAL ── */
+    #final-screen { display:none; animation:slideUp .5s ease; }
+    #final-screen.show { display:block; }
+
+    .final-wrap { background:var(--surface); border:2px solid var(--border); border-radius:20px; overflow:hidden; box-shadow:6px 6px 0 var(--border); }
+
+    .final-banner {
+      background:var(--ink); padding:40px 36px 32px; text-align:center;
+      border-bottom:2px solid var(--border); position:relative; overflow:hidden;
+    }
+
+    .final-banner::before {
+      content:''; position:absolute; inset:0;
+      background: radial-gradient(ellipse at 50% 100%, rgba(121,82,179,.2), transparent 60%);
+    }
+
+    .final-trophy { font-size:3rem; margin-bottom:12px; position:relative; }
+    .final-title { font-family:'Syne',sans-serif; font-size:clamp(1.8rem,5vw,2.8rem); font-weight:900; color:#fdfaf5; position:relative; margin-bottom:4px; }
+    .final-sub { color:var(--dim); font-size:.9rem; position:relative; }
+
+    .final-big-score {
+      font-family:'Syne',sans-serif; font-size:clamp(4rem,14vw,7rem);
+      font-weight:900; line-height:1; color:var(--gold); position:relative;
+    }
+
+    .final-denom { font-size:2.5rem; opacity:.4; }
+
+    .final-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--border); }
+
+    .final-cell { background:var(--surface); padding:20px 24px; }
+    .fc-mod { font-family:'Syne',sans-serif; font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+    .fc-score { font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:900; line-height:1; }
+    .fc-chips { display:flex; gap:4px; margin-top:6px; }
+    .fc-chip { width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; }
+    .fc-chip.c { background:rgba(26,122,74,.12); color:var(--ok); }
+    .fc-chip.e { background:rgba(184,50,50,.12); color:var(--err); }
+
+    .final-actions { padding:24px 36px; display:flex; justify-content:center; }
+
+    .btn-restart {
+      padding:13px 32px; background:var(--ink); color:var(--bg);
+      font-family:'Syne',sans-serif; font-size:15px; font-weight:800; letter-spacing:1px;
+      border:none; border-radius:10px; cursor:pointer; text-transform:uppercase;
+      box-shadow:4px 4px 0 var(--border2); transition:all .2s;
+    }
+
+    .btn-restart:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--border2); }
+
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+    @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.02)} 100%{transform:scale(1)} }
+    .shake { animation:shake .3s ease; }
+    .pop { animation:pop .3s ease; }
+
+    @media(max-width:560px) {
+      .mod-map { grid-template-columns:repeat(2,1fr); }
+      .final-grid { grid-template-columns:1fr; }
+      .hdr { flex-direction:column; }
+      .xp-panel { width:100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="game-eyebrow">Bootstrap 5 · Múltipla Escolha</div>
+      <div class="game-title">BS <em>MCQ</em></div>
+    </div>
+    <div class="xp-panel">
+      <div class="xp-top">
+        <span class="xp-label">⚡ XP</span>
+        <span class="xp-num" id="xp-val">0 / 2000</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="mod-map" id="mod-map"></div>
+
+  <div class="prog" id="prog-strip">
+    <div class="prog-name" id="prog-name">—</div>
+    <div class="prog-dots" id="prog-dots"></div>
+    <div class="prog-frac" id="prog-frac">0/20</div>
+  </div>
+
+  <div class="chips" id="chip-row"></div>
+
+  <div id="q-area"></div>
+
+  <div id="mod-complete">
+    <div class="mc-card" id="mc-card">
+      <div class="mc-stars" id="mc-stars">⭐⭐⭐</div>
+      <div class="mc-tag">Módulo Completo</div>
+      <div class="mc-title" id="mc-title">—</div>
+      <div class="mc-score-row">
+        <div class="mc-stat"><div class="mc-num ok" id="mc-ok">0</div><div class="mc-lbl">Corretas</div></div>
+        <div class="mc-stat"><div class="mc-num err" id="mc-err">0</div><div class="mc-lbl">Erradas</div></div>
+        <div class="mc-stat"><div class="mc-num xp" id="mc-xp">+0</div><div class="mc-lbl">XP</div></div>
+      </div>
+      <div class="mc-msg" id="mc-msg"></div>
+      <button class="btn-continue" id="btn-continue" onclick="startNextModule()">PRÓXIMO MÓDULO →</button>
+    </div>
+  </div>
+
+  <div id="final-screen">
+    <div class="final-wrap">
+      <div class="final-banner">
+        <div class="final-trophy">🏆</div>
+        <div class="final-title">Quiz Concluído!</div>
+        <div class="final-sub" id="final-sub">Resultado final</div>
+        <div class="final-big-score"><span id="f-num">0</span><span class="final-denom">/20</span></div>
+      </div>
+      <div class="final-grid" id="final-grid"></div>
+      <div class="final-actions">
+        <button class="btn-restart" onclick="restart()">↩ Reiniciar Quiz</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const MODULES = [
+  {
+    id:'grid', name:'Grid & Layout', icon:'📐',
+    color:'#7952b3', glow:'rgba(121,82,179,.2)', bg:'rgba(121,82,179,.07)',
+    questions:[
+      {
+        tag:'Sistema de Grid',
+        title:'Quantas colunas tem o grid do Bootstrap?',
+        snippet:null,
+        text:'O sistema de grid do Bootstrap é baseado em um número fixo de colunas. Qual é esse número?',
+        options:[
+          {l:'A', t:'8 colunas'},
+          {l:'B', t:'10 colunas'},
+          {l:'C', t:'12 colunas', correct:true},
+          {l:'D', t:'16 colunas'},
+          {l:'E', t:'É variável — você define o número'},
+        ],
+        exp:'O Bootstrap usa um grid de <code>12 colunas</code>. Isso permite combinar facilmente frações como 1/2 (col-6), 1/3 (col-4), 1/4 (col-3) etc.'
+      },
+      {
+        tag:'Breakpoints',
+        title:'Qual breakpoint representa telas ≥ 768px?',
+        snippet:null,
+        text:'O Bootstrap possui breakpoints responsivos nomeados. Qual prefixo corresponde a telas com largura mínima de 768px?',
+        options:[
+          {l:'A', t:'<code>xs</code>'},
+          {l:'B', t:'<code>sm</code>'},
+          {l:'C', t:'<code>md</code>', correct:true},
+          {l:'D', t:'<code>lg</code>'},
+          {l:'E', t:'<code>xl</code>'},
+        ],
+        exp:'<code>md</code> representa telas ≥ 768px. A sequência é: <code>xs</code> (&lt;576px), <code>sm</code> (≥576), <code>md</code> (≥768), <code>lg</code> (≥992), <code>xl</code> (≥1200), <code>xxl</code> (≥1400).'
+      },
+      {
+        tag:'container vs container-fluid',
+        title:'Qual a diferença entre container e container-fluid?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"container"</span><span class="ct">&gt;&lt;/div&gt;</span>
+<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"container-fluid"</span><span class="ct">&gt;&lt;/div&gt;</span>`,
+        text:'Qual é a diferença de comportamento entre as duas classes de container?',
+        options:[
+          {l:'A', t:'<code>container</code> é para mobile, <code>container-fluid</code> é para desktop'},
+          {l:'B', t:'<code>container</code> tem largura máxima por breakpoint; <code>container-fluid</code> ocupa 100% da largura sempre', correct:true},
+          {l:'C', t:'São idênticos, a diferença é apenas no nome'},
+          {l:'D', t:'<code>container-fluid</code> adiciona <code>overflow:scroll</code> automaticamente'},
+          {l:'E', t:'<code>container</code> requer uma <code>.row</code> obrigatoriamente, <code>container-fluid</code> não'},
+        ],
+        exp:'<code>.container</code> define larguras máximas responsivas (ex: 960px em md). <code>.container-fluid</code> sempre ocupa 100% da largura disponível, útil para seções de fundo full-width.'
+      },
+      {
+        tag:'col-sm-6',
+        title:'O que col-sm-6 significa exatamente?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-sm-6"</span><span class="ct">&gt;</span>Conteúdo<span class="ct">&lt;/div&gt;</span>`,
+        text:'Qual é o comportamento preciso da classe <code>col-sm-6</code>?',
+        options:[
+          {l:'A', t:'Ocupa 6 pixels de largura'},
+          {l:'B', t:'Ocupa 6 colunas em todas as telas'},
+          {l:'C', t:'Ocupa 6 colunas em telas ≥ 576px; ocupa 100% em telas menores', correct:true},
+          {l:'D', t:'Ocupa 50% apenas em telas md e maiores'},
+          {l:'E', t:'Ocupa 6 colunas em telas small, mas some em outras'},
+        ],
+        exp:'<code>col-sm-6</code> = 6 de 12 colunas (50%) em telas <code>sm</code> (≥576px) e maiores. Abaixo de sm, o elemento se expande para 100% da largura (comportamento padrão do col).'
+      },
+      {
+        tag:'row',
+        title:'Para que serve a classe .row?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"container"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"row"</span><span class="ct">&gt;</span>
+    <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"col-6"</span><span class="ct">&gt;</span>...<span class="ct">&lt;/div&gt;</span>
+  <span class="ct">&lt;/div&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Qual é o papel da classe <code>.row</code> no sistema de grid do Bootstrap?',
+        options:[
+          {l:'A', t:'Apenas adiciona uma linha horizontal decorativa'},
+          {l:'B', t:'Agrupa as colunas e compensa o padding negativo das cols com margin negativa', correct:true},
+          {l:'C', t:'Aplica <code>display:block</code> nos filhos'},
+          {l:'D', t:'É opcional — as colunas funcionam igual sem ela'},
+          {l:'E', t:'Define que o conteúdo vai em uma única linha sem quebra'},
+        ],
+        exp:'<code>.row</code> usa <code>display:flex</code> e aplica margens negativas para compensar o padding das colunas filhas, garantindo alinhamento correto. As colunas <strong>devem</strong> ser filhas diretas de um <code>.row</code>.'
+      }
+    ]
+  },
+
+  {
+    id:'components', name:'Componentes', icon:'🧩',
+    color:'#0d6efd', glow:'rgba(13,110,253,.2)', bg:'rgba(13,110,253,.07)',
+    questions:[
+      {
+        tag:'Botões',
+        title:'Como criar um botão de perigo (vermelho)?',
+        snippet:null,
+        text:'Qual é a combinação correta de classes para criar um botão Bootstrap vermelho (danger)?',
+        options:[
+          {l:'A', t:'<code>class="button button-danger"</code>'},
+          {l:'B', t:'<code>class="btn btn-danger"</code>', correct:true},
+          {l:'C', t:'<code>class="bs-btn danger"</code>'},
+          {l:'D', t:'<code>class="btn red"</code>'},
+          {l:'E', t:'<code>class="btn-danger"</code>'},
+        ],
+        exp:'Todo botão Bootstrap precisa das duas classes: <code>btn</code> (estilos base) + <code>btn-{variante}</code>. Sem <code>btn</code>, a variante não funciona corretamente.'
+      },
+      {
+        tag:'Cards',
+        title:'Qual estrutura mínima de um Card Bootstrap?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"???"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"???"</span><span class="ct">&gt;</span>
+    <span class="ct">&lt;h5&gt;</span>Título<span class="ct">&lt;/h5&gt;</span>
+  <span class="ct">&lt;/div&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Qual é a estrutura correta para criar um card Bootstrap simples?',
+        options:[
+          {l:'A', t:'<code>card</code> → <code>card-container</code>'},
+          {l:'B', t:'<code>card-wrapper</code> → <code>card-inner</code>'},
+          {l:'C', t:'<code>card</code> → <code>card-body</code>', correct:true},
+          {l:'D', t:'<code>bs-card</code> → <code>card-content</code>'},
+          {l:'E', t:'<code>card</code> → <code>card-section</code>'},
+        ],
+        exp:'A estrutura mínima de um card: <code>.card</code> como container externo e <code>.card-body</code> para o conteúdo. Dentro do body você pode usar <code>.card-title</code>, <code>.card-text</code>, etc.'
+      },
+      {
+        tag:'Navbar',
+        title:'O que data-bs-target faz no navbar?',
+        snippet:`<span class="ct">&lt;button</span> <span class="co">data-bs-toggle</span>=<span class="cs">"collapse"</span>
+        <span class="co">data-bs-target</span>=<span class="cs">"#navbarNav"</span><span class="ct">&gt;</span>
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'Para que serve o atributo <code>data-bs-target="#navbarNav"</code> no botão da navbar?',
+        options:[
+          {l:'A', t:'Define o link de navegação padrão ao carregar a página'},
+          {l:'B', t:'Especifica qual elemento será expandido/colapsado ao clicar no botão', correct:true},
+          {l:'C', t:'Define o tema de cor do navbar'},
+          {l:'D', t:'Cria uma âncora interna na página'},
+          {l:'E', t:'É obrigatório mas não tem efeito funcional'},
+        ],
+        exp:'<code>data-bs-target="#navbarNav"</code> diz ao Bootstrap qual elemento (com <code>id="navbarNav"</code>) deve ser mostrado/ocultado quando o botão toggler é clicado. Funciona junto com <code>data-bs-toggle="collapse"</code>.'
+      },
+      {
+        tag:'Modal',
+        title:'Como abrir um modal via atributo HTML?',
+        snippet:`<span class="cm">&lt;!-- Modal com id="meuModal" já existe --&gt;</span>
+<span class="ct">&lt;button</span> <span class="co">class</span>=<span class="cs">"btn btn-primary"</span>
+        <span class="co">???</span>=<span class="cs">"modal"</span>
+        <span class="co">???</span>=<span class="cs">"#meuModal"</span><span class="ct">&gt;</span>
+  Abrir
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'Quais atributos você adiciona ao botão para que ele abra o modal <strong>sem JavaScript</strong>?',
+        options:[
+          {l:'A', t:'<code>onclick="openModal"</code> e <code>modal-id="#meuModal"</code>'},
+          {l:'B', t:'<code>data-toggle="modal"</code> e <code>data-target="#meuModal"</code> (Bootstrap 4)'},
+          {l:'C', t:'<code>data-bs-toggle="modal"</code> e <code>data-bs-target="#meuModal"</code>', correct:true},
+          {l:'D', t:'<code>bs-modal="true"</code> e <code>bs-id="#meuModal"</code>'},
+          {l:'E', t:'<code>role="modal-trigger"</code> e <code>href="#meuModal"</code>'},
+        ],
+        exp:'No Bootstrap 5, os atributos são <code>data-bs-toggle="modal"</code> e <code>data-bs-target="#meuModal"</code>. Atenção ao prefixo <code>bs-</code> — no Bootstrap 4 era apenas <code>data-toggle</code> e <code>data-target</code>.'
+      },
+      {
+        tag:'Carousel',
+        title:'O que o atributo data-bs-ride="carousel" faz?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">id</span>=<span class="cs">"slider"</span>
+     <span class="co">class</span>=<span class="cs">"carousel slide"</span>
+     <span class="co">data-bs-ride</span>=<span class="cs">"carousel"</span><span class="ct">&gt;</span>`,
+        text:'Qual é o efeito de adicionar <code>data-bs-ride="carousel"</code> ao elemento do carousel?',
+        options:[
+          {l:'A', t:'Define a direção do slide (horizontal ou vertical)'},
+          {l:'B', t:'Faz o carousel iniciar automaticamente e avançar os slides sozinho', correct:true},
+          {l:'C', t:'Ativa o modo touch/swipe no mobile'},
+          {l:'D', t:'Define que o carousel vai parar no último slide'},
+          {l:'E', t:'Ativa o loop infinito dos slides'},
+        ],
+        exp:'<code>data-bs-ride="carousel"</code> ativa o <strong>autoplay</strong> — o carousel começa a rodar automaticamente assim que a página carrega. Sem esse atributo, o carousel só muda de slide manualmente.'
+      }
+    ]
+  },
+
+  {
+    id:'utilities', name:'Utilitários', icon:'🎨',
+    color:'#198754', glow:'rgba(25,135,84,.2)', bg:'rgba(25,135,84,.07)',
+    questions:[
+      {
+        tag:'Espaçamento',
+        title:'O que a classe mt-3 aplica?',
+        snippet:null,
+        text:'Qual estilo CSS a classe <code>mt-3</code> do Bootstrap aplica ao elemento?',
+        options:[
+          {l:'A', t:'<code>margin-bottom: 3px</code>'},
+          {l:'B', t:'<code>margin-top: 3rem</code>'},
+          {l:'C', t:'<code>margin-top: 1rem</code>', correct:true},
+          {l:'D', t:'<code>margin: 3em</code>'},
+          {l:'E', t:'<code>padding-top: 1rem</code>'},
+        ],
+        exp:'<code>m</code> = margin, <code>t</code> = top, <code>3</code> = escala 3 = 1rem (16px com font-size padrão). A escala Bootstrap: 0=0, 1=0.25rem, 2=0.5rem, 3=1rem, 4=1.5rem, 5=3rem.'
+      },
+      {
+        tag:'Flexbox',
+        title:'Como centralizar horizontalmente com Flex?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"d-flex ???"</span><span class="ct">&gt;</span>
+  <span class="ct">&lt;button&gt;</span>Botão<span class="ct">&lt;/button&gt;</span>
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Qual classe Bootstrap centraliza os filhos <strong>horizontalmente</strong> num container flex?',
+        options:[
+          {l:'A', t:'<code>align-items-center</code>'},
+          {l:'B', t:'<code>text-center</code>'},
+          {l:'C', t:'<code>justify-content-center</code>', correct:true},
+          {l:'D', t:'<code>flex-center</code>'},
+          {l:'E', t:'<code>align-content-center</code>'},
+        ],
+        exp:'<code>justify-content-center</code> centraliza no eixo principal (horizontal em flex-row). <code>align-items-center</code> centraliza no eixo cruzado (vertical). Ambos precisam de <code>d-flex</code> no elemento pai.'
+      },
+      {
+        tag:'Cores de texto',
+        title:'Qual classe deixa o texto verde (success)?',
+        snippet:null,
+        text:'Para aplicar a cor <strong>verde</strong> do Bootstrap a um texto, qual classe você usa?',
+        options:[
+          {l:'A', t:'<code>color-success</code>'},
+          {l:'B', t:'<code>bg-success</code>'},
+          {l:'C', t:'<code>text-success</code>', correct:true},
+          {l:'D', t:'<code>font-success</code>'},
+          {l:'E', t:'<code>text-green</code>'},
+        ],
+        exp:'As classes de cor de texto seguem o padrão <code>text-{variante}</code>: <code>text-primary</code>, <code>text-success</code>, <code>text-danger</code>, etc. Já <code>bg-{variante}</code> colore o fundo.'
+      },
+      {
+        tag:'Display',
+        title:'Como ocultar um elemento em mobile?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"???"</span><span class="ct">&gt;</span>
+  Sidebar (só desktop)
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'Você quer ocultar um elemento em telas pequenas (mobile) e exibi-lo apenas em telas <code>md</code> e maiores. Qual classe usar?',
+        options:[
+          {l:'A', t:'<code>hidden-sm d-md-block</code>'},
+          {l:'B', t:'<code>d-none d-md-block</code>', correct:true},
+          {l:'C', t:'<code>d-sm-none d-md-show</code>'},
+          {l:'D', t:'<code>visible-md</code>'},
+          {l:'E', t:'<code>d-md-visible</code>'},
+        ],
+        exp:'O padrão correto: <code>d-none</code> (oculta por padrão) + <code>d-md-block</code> (exibe como block a partir de md). No PerfectWatch você pode ver isso: <code>class="col-12 col-md-3 d-none d-md-flex"</code>.'
+      },
+      {
+        tag:'Icons',
+        title:'Como incluir Bootstrap Icons no projeto?',
+        snippet:null,
+        text:'Qual é a forma correta de incluir a biblioteca Bootstrap Icons via CDN?',
+        options:[
+          {l:'A', t:'Está incluído automaticamente no CSS do Bootstrap'},
+          {l:'B', t:'<code>&lt;script src="bootstrap-icons.js"&gt;</code>'},
+          {l:'C', t:'<code>&lt;link rel="stylesheet" href="https://cdn.../bootstrap-icons.css"&gt;</code>', correct:true},
+          {l:'D', t:'<code>&lt;link rel="icon" href="bootstrap-icons"&gt;</code>'},
+          {l:'E', t:'<code>&lt;import src="bootstrap-icons"&gt;</code>'},
+        ],
+        exp:'Bootstrap Icons é uma biblioteca <strong>separada</strong> do Bootstrap CSS. Você inclui via <code>&lt;link&gt;</code> com o CSS da biblioteca. Depois usa com <code>&lt;i class="bi bi-nome-do-icone"&gt;&lt;/i&gt;</code>.'
+      }
+    ]
+  },
+
+  {
+    id:'js', name:'JS & Interação', icon:'⚡',
+    color:'#fd7e14', glow:'rgba(253,126,20,.2)', bg:'rgba(253,126,20,.07)',
+    questions:[
+      {
+        tag:'Alerts',
+        title:'Como mostrar um alert Bootstrap via JavaScript?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"alert alert-success fade"</span> <span class="co">id</span>=<span class="cs">"msg"</span><span class="ct">&gt;</span>
+  Salvo!
+<span class="ct">&lt;/div&gt;</span>`,
+        text:'O alert acima está oculto (sem a classe <code>show</code>). Como adicioná-la via JavaScript para exibi-lo?',
+        options:[
+          {l:'A', t:'<code>document.getElementById("msg").show()</code>'},
+          {l:'B', t:'<code>document.getElementById("msg").classList.add("show")</code>', correct:true},
+          {l:'C', t:'<code>bootstrap.Alert.show("#msg")</code>'},
+          {l:'D', t:'<code>document.getElementById("msg").style.display = "block"</code>'},
+          {l:'E', t:'<code>$("#msg").bootstrapAlert()</code>'},
+        ],
+        exp:'O estado visível/oculto do alert Bootstrap é controlado pela classe <code>show</code>. Com <code>classList.add("show")</code> você a adiciona. Para ocultar: <code>classList.remove("show")</code>.'
+      },
+      {
+        tag:'Toast',
+        title:'Como instanciar e exibir um Toast Bootstrap?',
+        snippet:`<span class="ck">const</span> <span class="co">toastEl</span> = document.<span class="cf">getElementById</span>(<span class="cs">'meuToast'</span>);
+<span class="cm">// Como criar a instância e mostrar?</span>`,
+        text:'Qual é o código correto para instanciar e exibir um Toast usando a API JavaScript do Bootstrap 5?',
+        options:[
+          {l:'A', t:'<code>toastEl.show()</code>'},
+          {l:'B', t:'<code>bootstrap.showToast(toastEl)</code>'},
+          {l:'C', t:'<code>new bootstrap.Toast(toastEl).show()</code>', correct:true},
+          {l:'D', t:'<code>toastEl.classList.add("toast-visible")</code>'},
+          {l:'E', t:'<code>bootstrap.Toast.show("#meuToast")</code>'},
+        ],
+        exp:'Componentes Bootstrap com JS precisam ser <strong>instanciados</strong>: <code>new bootstrap.Toast(elemento)</code> cria a instância, e <code>.show()</code> a exibe. Esse padrão é o mesmo para Modal, Dropdown, etc.'
+      },
+      {
+        tag:'Progress Bar',
+        title:'Como atualizar o valor de uma progress bar dinamicamente?',
+        snippet:`<span class="ct">&lt;div</span> <span class="co">class</span>=<span class="cs">"progress-bar"</span> <span class="co">id</span>=<span class="cs">"bar"</span>
+     <span class="co">style</span>=<span class="cs">"width: 0%"</span><span class="ct">&gt;</span>0%<span class="ct">&lt;/div&gt;</span>`,
+        text:'Qual é a forma correta de atualizar a progress bar para 60% via JavaScript?',
+        options:[
+          {l:'A', t:'<code>bar.value = 60</code>'},
+          {l:'B', t:'<code>bar.style.width = "60%" ; bar.textContent = "60%"</code>', correct:true},
+          {l:'C', t:'<code>bar.setAttribute("progress", 60)</code>'},
+          {l:'D', t:'<code>bar.classList.add("w-60")</code>'},
+          {l:'E', t:'<code>bootstrap.ProgressBar.set(bar, 60)</code>'},
+        ],
+        exp:'A progress bar Bootstrap usa a propriedade CSS <code>width</code> para definir o progresso. Via JS, você altera <code>style.width</code> e opcionalmente o <code>textContent</code> para exibir o percentual.'
+      },
+      {
+        tag:'data-bs-dismiss',
+        title:'O que data-bs-dismiss="modal" faz?',
+        snippet:`<span class="ct">&lt;button</span> <span class="co">data-bs-dismiss</span>=<span class="cs">"modal"</span><span class="ct">&gt;</span>
+  Fechar
+<span class="ct">&lt;/button&gt;</span>`,
+        text:'Qual é o efeito de adicionar <code>data-bs-dismiss="modal"</code> a um botão dentro de um modal?',
+        options:[
+          {l:'A', t:'Remove permanentemente o modal do DOM'},
+          {l:'B', t:'Fecha o modal sem precisar escrever JavaScript', correct:true},
+          {l:'C', t:'Salva o estado do formulário antes de fechar'},
+          {l:'D', t:'Fecha todos os modais abertos na página'},
+          {l:'E', t:'É apenas um marcador semântico sem efeito funcional'},
+        ],
+        exp:'<code>data-bs-dismiss="modal"</code> é um gatilho declarativo — o Bootstrap detecta esse atributo e fecha o modal pai automaticamente. Sem ele, você precisaria chamar <code>bootstrap.Modal.getInstance(el).hide()</code> via JS.'
+      },
+      {
+        tag:'DOMContentLoaded',
+        title:'Por que usar DOMContentLoaded com Bootstrap JS?',
+        snippet:`document.<span class="cf">addEventListener</span>(<span class="cs">'DOMContentLoaded'</span>, <span class="ck">function</span>() {
+  <span class="cm">// código Bootstrap aqui</span>
+});`,
+        text:'Por que é recomendado inicializar componentes Bootstrap JS dentro do <code>DOMContentLoaded</code>?',
+        options:[
+          {l:'A', t:'Para carregar o Bootstrap antes do HTML'},
+          {l:'B', t:'Para garantir que o HTML já foi totalmente parseado antes de manipulá-lo', correct:true},
+          {l:'C', t:'É um requisito obrigatório do Bootstrap — sem ele gera erro'},
+          {l:'D', t:'Para que o Bootstrap carregue os estilos CSS dinamicamente'},
+          {l:'E', t:'Apenas por convenção — não faz diferença técnica'},
+        ],
+        exp:'<code>DOMContentLoaded</code> dispara quando o HTML foi completamente lido e parseado. Se você manipular elementos antes disso, eles podem não existir ainda no DOM. Colocar o script no final do <code>&lt;body&gt;</code> resolve o mesmo problema.'
+      }
+    ]
+  }
+];
+
+let modIdx=0, qIdx=0, totalXP=0, selectedOpt=null, phase='quiz';
+const MAX_XP=2000, results=[[],[],[],[]];
+
+function applyTheme(mod) {
+  const r=document.documentElement.style;
+  r.setProperty('--mc',mod.color);
+  r.setProperty('--mc-glow',mod.glow);
+  r.setProperty('--bs-bg',mod.bg);
+  r.setProperty('--bs-glow',mod.glow);
+}
+
+function renderModMap() {
+  document.getElementById('mod-map').innerHTML=MODULES.map((m,i)=>{
+    const done=i<modIdx, active=i===modIdx&&phase==='quiz', locked=i>modIdx;
+    const cls=done?'done':active?'active':'';
+    return `<div class="mod-card ${cls}" style="--mc:${m.color}">
+      <div class="mod-lock">${locked?'🔒':''}</div>
+      <div class="mod-icon">${m.icon}</div>
+      <div class="mod-name">${m.name}</div>
+      <div class="mod-score">${done?`${results[i].filter(Boolean).length}/5 ✓`:active?'EM JOGO':'—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderChips() {
+  const row=document.getElementById('chip-row');
+  row.innerHTML='';
+  MODULES.forEach((m,mi)=>{
+    if(mi>0){const s=document.createElement('div');s.className='chip sep';row.appendChild(s);}
+    m.questions.forEach((_,qi)=>{
+      const d=document.createElement('div');
+      d.className='chip';d.id=`chip-${mi*5+qi}`;d.textContent=qi+1;
+      const res=results[mi][qi];
+      if(res===true)d.classList.add('c');
+      if(res===false)d.classList.add('e');
+      if(mi===modIdx&&qi===qIdx&&phase==='quiz'){d.style.borderColor=m.color;d.style.color=m.color;}
+      row.appendChild(d);
+    });
+  });
+}
+
+function markChip(mi,qi,ok) {
+  const d=document.getElementById(`chip-${mi*5+qi}`);
+  if(!d)return;
+  d.classList.remove('c','e');d.classList.add(ok?'c':'e');
+  d.style.borderColor='';d.style.color='';d.textContent=ok?'✓':'✗';
+}
+
+function renderProg() {
+  const mod=MODULES[modIdx], total=modIdx*5+qIdx;
+  document.getElementById('prog-name').textContent=mod.name;
+  document.getElementById('prog-frac').textContent=`${Math.min(total,20)}/20`;
+  document.getElementById('prog-dots').innerHTML=Array.from({length:5},(_,i)=>{
+    const cls=i<qIdx?'done':i===qIdx?'active':'';
+    return `<div class="pdot ${cls}"></div>`;
+  }).join('');
+}
+
+function addXP(v) {
+  totalXP=Math.min(totalXP+v,MAX_XP);
+  document.getElementById('xp-fill').style.width=(totalXP/MAX_XP*100)+'%';
+  document.getElementById('xp-val').textContent=`${totalXP} / ${MAX_XP}`;
+}
+
+function renderQuestion() {
+  selectedOpt=null;
+  const mod=MODULES[modIdx], q=mod.questions[qIdx];
+  applyTheme(mod);
+  renderModMap();renderChips();renderProg();
+
+  const codeHtml=q.snippet?`<div class="code-block">${q.snippet}</div>`:'';
+  const optsHtml=q.options.map(o=>`
+    <div class="opt" data-letter="${o.l}" onclick="selectOpt('${o.l}')">
+      <div class="opt-letter">${o.l}</div>
+      <div class="opt-text">${o.t}</div>
+      <div class="opt-icon"></div>
+    </div>`).join('');
+
+  document.getElementById('q-area').innerHTML=`
+    <div class="q-card" id="active-card">
+      <div class="q-head">
+        <span class="q-badge">Módulo ${modIdx+1} · Questão ${qIdx+1}/5</span>
+        <span class="q-tag">${q.tag}</span>
+      </div>
+      <div class="q-body">
+        <div class="q-title">${q.title}</div>
+        ${codeHtml}
+        <p class="q-text">${q.text}</p>
+        <div class="options">${optsHtml}</div>
+        <button class="btn-confirm" id="btn-confirm" onclick="confirmAnswer()" disabled>CONFIRMAR →</button>
+        <div class="feedback" id="feedback"></div>
+        <button class="btn-next" id="btn-next" onclick="advanceQuestion()">
+          ${qIdx<4?'Próxima questão →':'Finalizar módulo →'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function selectOpt(letter) {
+  if(document.getElementById('btn-next').classList.contains('show'))return;
+  selectedOpt=letter;
+  document.querySelectorAll('.opt').forEach(el=>el.classList.toggle('selected',el.dataset.letter===letter));
+  const btn=document.getElementById('btn-confirm');
+  btn.classList.add('ready');btn.disabled=false;
+}
+
+function confirmAnswer() {
+  if(!selectedOpt)return;
+  const mod=MODULES[modIdx], q=mod.questions[qIdx];
+  const correct=q.options.find(o=>o.correct).l;
+  const ok=selectedOpt===correct;
+  results[modIdx][qIdx]=ok;
+  markChip(modIdx,qIdx,ok);
+
+  document.querySelectorAll('.opt').forEach(el=>{
+    el.classList.add('disabled');
+    const l=el.dataset.letter;
+    if(l===correct){el.classList.add(ok?'correct':'reveal-correct');el.querySelector('.opt-icon').textContent='✓';}
+    else if(l===selectedOpt&&!ok){el.classList.add('wrong');el.querySelector('.opt-icon').textContent='✗';}
+  });
+
+  document.getElementById('btn-confirm').style.display='none';
+  const fb=document.getElementById('feedback');
+  const card=document.getElementById('active-card');
+
+  if(ok){
+    addXP(80);card.classList.add('pop');setTimeout(()=>card.classList.remove('pop'),300);
+    fb.className='feedback ok show';
+    fb.innerHTML=`<div class="fb-head">✓ Correto! +80 XP</div>${q.exp}`;
+  } else {
+    card.classList.add('shake');setTimeout(()=>card.classList.remove('shake'),300);
+    fb.className='feedback fail show';
+    fb.innerHTML=`<div class="fb-head">✗ Incorreto — a resposta era ${correct}</div>${q.exp}`;
+  }
+  document.getElementById('btn-next').classList.add('show');
+}
+
+function advanceQuestion() {
+  if(qIdx<4){qIdx++;renderQuestion();}
+  else{showModComplete();}
+}
+
+function showModComplete() {
+  phase='mod-complete';
+  document.getElementById('q-area').innerHTML='';
+  const mod=MODULES[modIdx], res=results[modIdx];
+  const ok=res.filter(Boolean).length, pct=ok/5;
+  applyTheme(mod);
+  const mc=document.getElementById('mc-card');
+  mc.style.setProperty('--mc',mod.color);mc.style.setProperty('--mc-glow',mod.glow);
+  document.getElementById('mc-stars').textContent=pct===1?'⭐⭐⭐':pct>=.6?'⭐⭐':'⭐';
+  document.getElementById('mc-title').textContent=mod.name;
+  document.getElementById('mc-ok').textContent=ok;
+  document.getElementById('mc-err').textContent=5-ok;
+  document.getElementById('mc-xp').textContent=`+${ok*80}`;
+  const msgs=[[1,'Perfeito! Módulo dominado.'],[.8,'Muito bem!'],[.6,'Bom progresso!'],[0,'Continue praticando!']];
+  document.getElementById('mc-msg').textContent=msgs.find(([t])=>pct>=t)[1];
+  const isLast=modIdx===MODULES.length-1;
+  document.getElementById('btn-continue').textContent=isLast?'VER RESULTADO FINAL →':'PRÓXIMO MÓDULO →';
+  document.getElementById('mod-complete').classList.add('show');
+  renderModMap();renderChips();
+}
+
+function startNextModule() {
+  document.getElementById('mod-complete').classList.remove('show');
+  phase='quiz';
+  if(modIdx===MODULES.length-1){showFinal();return;}
+  modIdx++;qIdx=0;renderQuestion();
+}
+
+function showFinal() {
+  phase='final';
+  document.getElementById('q-area').innerHTML='';
+  const totalOk=results.flat().filter(Boolean).length;
+  document.getElementById('f-num').textContent=totalOk;
+  const pct=totalOk/20;
+  const subs=[[1,'🏆 Perfeito!'],[.85,'🔥 Excelente!'],[.7,'👍 Muito bom!'],[.5,'💪 Bom início!'],[0,'📚 Continue praticando!']];
+  document.getElementById('final-sub').textContent=subs.find(([t])=>pct>=t)[1];
+  document.getElementById('final-grid').innerHTML=MODULES.map((m,i)=>{
+    const res=results[i], ok=res.filter(Boolean).length;
+    const color=ok===5?'var(--ok)':ok>=3?m.color:'var(--err)';
+    return `<div class="final-cell">
+      <div class="fc-mod" style="color:${m.color}">${m.icon} ${m.name}</div>
+      <div class="fc-score" style="color:${color}">${ok}/5</div>
+      <div class="fc-chips">${res.map(r=>`<div class="fc-chip ${r?'c':'e'}">${r?'✓':'✗'}</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('final-screen').classList.add('show');
+  modIdx=MODULES.length;renderModMap();renderChips();
+}
+
+function restart() {
+  modIdx=0;qIdx=0;totalXP=0;phase='quiz';selectedOpt=null;
+  results.forEach(r=>r.length=0);
+  document.getElementById('xp-fill').style.width='0%';
+  document.getElementById('xp-val').textContent='0 / 2000';
+  document.getElementById('final-screen').classList.remove('show');
+  document.getElementById('mod-complete').classList.remove('show');
+  applyTheme(MODULES[0]);renderQuestion();
+}
+
+applyTheme(MODULES[0]);
+renderQuestion();
+</script>
+</body>
+</html>

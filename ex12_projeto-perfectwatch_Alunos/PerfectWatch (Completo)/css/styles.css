@@ -1,0 +1,10 @@
+/* 2ª Digitação (Aqui) */
+*{
+    font-family: 'Montserrat', sans-serif;
+}
+
+
+body{
+    background-color: radial-gradiant(circle, #202020, #252525);
+    color: #fff;
+}
